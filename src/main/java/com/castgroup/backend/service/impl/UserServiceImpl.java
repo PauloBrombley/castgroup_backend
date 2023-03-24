@@ -7,7 +7,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -19,7 +18,7 @@ import com.castgroup.backend.service.UserService;
 
 @Service
 public class UserServiceImpl implements UserService {
-	
+
 	private static final Logger logger = LoggerFactory.getLogger(UserServiceImpl.class);
 
 	private final UserRepository userRepository;
@@ -31,26 +30,18 @@ public class UserServiceImpl implements UserService {
 	}
 
 	@Override
-	public ResponseEntity<String> login(UserDto userDto) {
-		logger.info("loggin passei ");
-		// Verifique se o usuário e a senha estão prenchidos
-		if (userDto.getName().isBlank() || userDto.getPassword().isBlank()) {
-			logger.info("name: "+userDto.getName());
-			logger.info("password: "+userDto.getPassword());
-			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Usuário ou senha vazios.");
-		}
+	public UserDto login(UserDto userDto) {
+		logger.info("loggin2 passei ");
 		// Armazena o usuário atual e o tempo de expiração da sessão
 		Optional<UserModel> opUserModel = userRepository.findByName(userDto.getName());
-		if(opUserModel.isPresent()) {
+		if (opUserModel.isPresent()) {
 			SESSIONS.put(opUserModel.get().getId(), LocalDateTime.now());
-			return ResponseEntity.ok("Login Renovado");
-		} else {
-			UserModel user = userRepository.save(userDto.toEntity());
-			SESSIONS.put(user.getId(), LocalDateTime.now());
+			return UserDto.of(opUserModel.get());
 		}
-		
-		return ResponseEntity.ok("Login bem sucedido!");
 
+		UserModel user = userRepository.save(userDto.toEntity());
+		SESSIONS.put(user.getId(), LocalDateTime.now());
+		return UserDto.of(user);
 	}
 
 	@Override
@@ -59,10 +50,10 @@ public class UserServiceImpl implements UserService {
 
 		return ResponseEntity.ok("Logout bem sucedido!");
 	}
-	
+
 	@Scheduled(fixedDelay = 60_000)
-    public void cleanupSessions() {
-        SESSIONS.entrySet().removeIf(entry -> entry.getValue().plusSeconds(60).isBefore(LocalDateTime.now()));
-    }
+	public void cleanupSessions() {
+		SESSIONS.entrySet().removeIf(entry -> entry.getValue().plusSeconds(60).isBefore(LocalDateTime.now()));
+	}
 
 }
